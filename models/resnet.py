@@ -11,6 +11,8 @@
 import torch
 import torch.nn as nn
 
+from .vq import Quantize
+
 class BasicBlock(nn.Module):
     """Basic Block for resnet 18 and resnet 34
 
@@ -79,11 +81,12 @@ class BottleNeck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, num_block, num_classes=100):
+    def __init__(self, block, num_block, vq=False, student=False, num_classes=100):
         super().__init__()
 
         self.in_channels = 64
-
+        self.has_vq = vq
+        self.student = student
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(64),
@@ -96,6 +99,9 @@ class ResNet(nn.Module):
         self.conv5_x = self._make_layer(block, 512, num_block[3], 2)
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
+        if self.has_vq:
+            self.vq = Quantize(512 * block.expansion, 1024, on_training=not student)
+            self.quantize_conv_t = nn.Conv2d(512 * block.expansion, 512 * block.expansion, 1)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
         """make resnet layers(by layer i didnt mean this 'layer' was the
@@ -128,36 +134,43 @@ class ResNet(nn.Module):
         output = self.conv3_x(output)
         output = self.conv4_x(output)
         output = self.conv5_x(output)
+        if self.has_vq:
+            output = self.quantize_conv_t(output)
+            output = self.vq(output.permute(0, 2, 3, 1))
+            output, diff, _ = output
+            output = output.permute(0, 3, 1, 2)
         output = self.avg_pool(output)
         output = output.view(output.size(0), -1)
         output = self.fc(output)
 
+        if self.training:
+            return output, diff
         return output
 
-def resnet18():
+def resnet18(vq, student):
     """ return a ResNet 18 object
     """
-    return ResNet(BasicBlock, [2, 2, 2, 2])
+    return ResNet(BasicBlock, [2, 2, 2, 2], vq, student)
 
-def resnet34():
+def resnet34(vq, student):
     """ return a ResNet 34 object
     """
-    return ResNet(BasicBlock, [3, 4, 6, 3])
+    return ResNet(BasicBlock, [3, 4, 6, 3], vq, student)
 
-def resnet50():
+def resnet50(vq, student):
     """ return a ResNet 50 object
     """
-    return ResNet(BottleNeck, [3, 4, 6, 3])
+    return ResNet(BottleNeck, [3, 4, 6, 3], vq, student)
 
-def resnet101():
+def resnet101(vq, student):
     """ return a ResNet 101 object
     """
-    return ResNet(BottleNeck, [3, 4, 23, 3])
+    return ResNet(BottleNeck, [3, 4, 23, 3], vq, student)
 
-def resnet152():
+def resnet152(vq, student):
     """ return a ResNet 152 object
     """
-    return ResNet(BottleNeck, [3, 8, 36, 3])
+    return ResNet(BottleNeck, [3, 8, 36, 3], vq, student)
 
 
 
