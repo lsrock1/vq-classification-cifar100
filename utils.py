@@ -16,22 +16,22 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 
-def get_network(args):
+def get_network(args, vq=False, student=False):
     """ return given network
     """
 
     if args.net == 'vgg16':
         from models.vgg import vgg16_bn
-        net = vgg16_bn()
+        net = vgg16_bn(vq, student)
     elif args.net == 'vgg13':
         from models.vgg import vgg13_bn
-        net = vgg13_bn()
+        net = vgg13_bn(vq, student)
     elif args.net == 'vgg11':
         from models.vgg import vgg11_bn
-        net = vgg11_bn()
+        net = vgg11_bn(vq, student)
     elif args.net == 'vgg19':
         from models.vgg import vgg19_bn
-        net = vgg19_bn()
+        net = vgg19_bn(vq, student)
     elif args.net == 'densenet121':
         from models.densenet import densenet121
         net = densenet121()
@@ -61,19 +61,19 @@ def get_network(args):
         net = xception()
     elif args.net == 'resnet18':
         from models.resnet import resnet18
-        net = resnet18()
+        net = resnet18(vq, student)
     elif args.net == 'resnet34':
         from models.resnet import resnet34
-        net = resnet34()
+        net = resnet34(vq, student)
     elif args.net == 'resnet50':
         from models.resnet import resnet50
-        net = resnet50()
+        net = resnet50(vq, student)
     elif args.net == 'resnet101':
         from models.resnet import resnet101
-        net = resnet101()
+        net = resnet101(vq, student)
     elif args.net == 'resnet152':
         from models.resnet import resnet152
-        net = resnet152()
+        net = resnet152(vq, student)
     elif args.net == 'preactresnet18':
         from models.preactresnet import preactresnet18
         net = preactresnet18()
