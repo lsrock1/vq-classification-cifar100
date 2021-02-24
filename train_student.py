@@ -30,6 +30,8 @@ def train(epoch):
 
     start = time.time()
     net.train()
+    net.fc.weight.requires_grad = False
+    net.fc.bias.requires_grad = False
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
 
         if args.gpu:
@@ -55,8 +57,8 @@ def train(epoch):
             if 'bias' in name:
                 writer.add_scalar('LastLayerGradients/grad_norm2_bias', para.grad.norm(), n_iter)
 
-        print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
-            loss.item(),
+        print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f},{:0.4f}\tLR: {:0.6f}'.format(
+            loss.item(), diff.mean().item(),
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
             trained_samples=batch_index * args.b + len(images),
@@ -141,7 +143,9 @@ if __name__ == '__main__':
     codebook = torch.load(args.teacher)
 
     model_dict = net.state_dict()
-    pretrained_dict = {k: v for k, v in codebook.items() if 'vq' in k and k in model_dict}
+    # pretrained_dict = {k: v for k, v in codebook.items() if ('vq' in k) and k in model_dict}
+
+    pretrained_dict = {k: v for k, v in codebook.items() if ('vq' in k or 'fc' in k) and k in model_dict}
     model_dict.update(pretrained_dict)
     print(list(pretrained_dict.keys()))
     net.load_state_dict(model_dict)

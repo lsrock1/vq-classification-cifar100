@@ -26,15 +26,16 @@ class VGG(nn.Module):
         self.features = features
         self.has_vq = vq
         self.student = student
-        self.classifier = nn.Sequential(
-            nn.Linear(2048, 4096), # modified because of teacher net
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(4096, num_class)
-        )
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(2048, 4096), # modified because of teacher net
+        #     nn.ReLU(inplace=True),
+        #     nn.Dropout(),
+        #     nn.Linear(4096, 4096),
+        #     nn.ReLU(inplace=True),
+        #     nn.Dropout(),
+        #     nn.Linear(4096, num_class)
+        # )
+        self.fc = nn.Linear(2048, num_class)
         if self.has_vq:
             self.vq = Quantize(2048, 1024, on_training=not student)
             self.quantize_conv_t = nn.Conv2d(512, 512, 1)
@@ -47,9 +48,9 @@ class VGG(nn.Module):
             output, diff, _ = output
             output = output.permute(0, 3, 1, 2)
         output = output.view(output.size()[0], -1)
-        output = self.classifier(output)
+        output = self.fc(output)
 
-        if self.training:
+        if self.training and self.has_vq:
             return output, diff
         return output
 

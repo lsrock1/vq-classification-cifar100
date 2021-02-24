@@ -25,7 +25,7 @@ class Quantize(nn.Module):
             
             proxy = self.embed.reshape(input.shape[-1], -1, self.n_embed)
             ld = proxy.shape[1]
-            proxy = proxy[:, 0, :]
+            proxy = proxy.mean(dim=1)
 
             dist = (
                 flatten.pow(2).sum(1, keepdim=True)
@@ -40,8 +40,11 @@ class Quantize(nn.Module):
             embed_ind = embed_ind.view(*input.shape[:-1])
             quantize = self.embed_code(embed_ind)
             new_input = quantize.clone().detach().reshape(input.shape[0], input.shape[1], input.shape[2], input.shape[3], ld)
-            new_input[..., 0] = new_input[..., 0] + input
+            # new_input[..., 0] = 0
+            diff = (new_input[...,0] - input).pow(2).mean()
+            new_input[..., 0] = input
             input = new_input.reshape(input.shape[0], input.shape[1], input.shape[2], -1)
+            
         else:
             dist = (
                 flatten.pow(2).sum(1, keepdim=True)
@@ -52,7 +55,7 @@ class Quantize(nn.Module):
             embed_onehot = F.one_hot(embed_ind, self.n_embed).type(flatten.dtype)
             embed_ind = embed_ind.view(*input.shape[:-1])
             quantize = self.embed_code(embed_ind)
-
+            diff = (quantize.detach() - input).pow(2).mean()
         if self.training and self.on_training:
             embed_onehot_sum = embed_onehot.sum(0)
             embed_sum = flatten.transpose(0, 1) @ embed_onehot
@@ -71,7 +74,7 @@ class Quantize(nn.Module):
             embed_normalized = self.embed_avg / cluster_size.unsqueeze(0)
             self.embed.data.copy_(embed_normalized)
 
-        diff = (quantize.detach() - input).pow(2).mean()
+        
         quantize = input + (quantize - input).detach()
 
         return quantize, diff, embed_ind

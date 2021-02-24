@@ -143,7 +143,7 @@ class ResNet(nn.Module):
         output = output.view(output.size(0), -1)
         output = self.fc(output)
 
-        if self.training:
+        if self.training and self.has_vq:
             return output, diff
         return output
 
